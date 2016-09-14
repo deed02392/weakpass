@@ -1,0 +1,7 @@
+admin admin
+123456 123456
+user pass
+whoami whoami
+ruby 521332
+1234567 1234567
+root toor
