@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-func TestSSHClient(t *testing.T) {
+// Test Client.Do
+
+// Use SSH Bruteforce as example.
+func TestClientDo(t *testing.T) {
 	var bruter = DefaultSSHBruter()
 	var config = DefaultSSHConfig()
 	c, err := NewClient(bruter, config)
@@ -58,7 +61,10 @@ func TestSSHClient(t *testing.T) {
 
 }
 
-func TestSSHClientRun(t *testing.T) {
+// Test Client.Run
+
+// Use SSH as example.
+func TestClientRun(t *testing.T) {
 	config := &BruteConfig{
 		Protocol:    "tcp",
 		Port:        22,
@@ -66,7 +72,7 @@ func TestSSHClientRun(t *testing.T) {
 		RequireUser: true,
 		RequirePass: true,
 		Dictpath:    "dict/userpass.txt",
-		Targets:     []string{"127.0.0.1", "192.168.1.15"},
+		Targets:     []string{"127.0.0.1"},
 	}
 	c, err := NewClient(DefaultSSHBruter(), config)
 
@@ -90,12 +96,53 @@ func TestSSHClientRun(t *testing.T) {
 		}
 	}
 	tick.Stop()
+	if len(responses) != 0 {
+		t.Fail()
+	}
+}
+
+// Test Client.Start
+//
+// Use Redis Brutefore as example.
+func TestClientStart(t *testing.T) {
+	config := &BruteConfig{
+		Protocol:    "tcp",
+		Port:        6379,
+		Workers:     100,
+		RequireUser: false,
+		RequirePass: true,
+		Dictpath:    "dict/userpass.txt",
+		Targets:     []string{"127.0.0.1"},
+	}
+
+	c, err := NewClient(DefaultRedisBruter(), config)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	c.Start()
+
+	for {
+		if !c.IsFinished() {
+			t.Logf("Progress: %v", c.GetProgress())
+			time.Sleep(200)
+		} else {
+			t.Log("Done.")
+			break
+		}
+	}
+
+	responses := c.GetResult()
+
 	if len(responses) != 1 {
 		t.Fail()
 	}
 
 	var resp = responses[0]
-	if resp.User != "ruby" || resp.Pass != "521332" {
+
+	if resp.User != "" || resp.Pass != "foobared" {
 		t.Fail()
 	}
+
 }

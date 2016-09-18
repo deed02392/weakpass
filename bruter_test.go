@@ -50,8 +50,6 @@ func TestRedisBruter(t *testing.T) {
 
 	var resp = responses[0]
 
-	t.Logf("Resp: %s", resp)
-
 	if resp.User != "" || resp.Pass != "foobared" {
 		t.Fail()
 	}

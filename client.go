@@ -3,6 +3,7 @@ package gobrute
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 // A Client is a bruteforce client.
@@ -17,6 +18,15 @@ type Client struct {
 
 	// BruteConfig describes How the client act during the bruteforce. (eg: Num of Workers)
 	Config *BruteConfig
+
+	// Cliect progress.
+	Progress float32
+
+	//
+	Finished bool
+
+	//
+	Result []*Response
 }
 
 // NewClient returns a client with custom configation.
@@ -83,6 +93,8 @@ func (c *Client) DoBatch(reqs ...*Request) <-chan *Response {
 	return responses
 }
 
+//
+
 func (c *Client) Run() <-chan *Response {
 	credentials, err := ReadUserPass(c.Config.Dictpath)
 	if err != nil {
@@ -110,4 +122,59 @@ func (c *Client) Run() <-chan *Response {
 	}
 	c.Config.Jobs = len(requests)
 	return c.DoBatch(requests...)
+}
+
+// Call a client's start method means start a bruteforce task.
+//
+// You check task progress by: client.Progress
+// And check whether task is finished by: client.Finiehed.
+
+func (c *Client) Start() {
+
+	t := time.NewTicker(200 * time.Millisecond)
+
+	responses := make([]*Response, 0)
+
+	respch := c.Run()
+
+	completed := 0
+
+	go func() {
+		for completed < c.Config.Jobs {
+			select {
+			case resp := <-respch:
+				completed++
+				c.Progress = float32(completed) / float32(c.Config.Jobs)
+				if resp != nil {
+					responses = append(responses, resp)
+				}
+			case <-t.C:
+				// pass
+			}
+		}
+		t.Stop()
+		c.Finished = true
+		c.Result = responses
+	}()
+}
+
+/*
+ Wrapper for client.Progress
+*/
+func (c *Client) GetProgress() float32 {
+	return c.Progress
+}
+
+/*
+Wrapper for client.Finished
+*/
+func (c *Client) IsFinished() bool {
+	return c.Finished
+}
+
+/*
+Wrapper for client.Result
+*/
+func (c *Client) GetResult() []*Response {
+	return c.Result
 }
