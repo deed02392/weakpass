@@ -1,10 +1,13 @@
 package gobrute
 
 import (
+	//	"database/sql"
 	"github.com/garyburd/redigo/redis"
+	//	"github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/ssh"
 	"log"
-	"strconv"
+	//	"strconv"
+	"time"
 )
 
 type Bruter interface {
@@ -16,8 +19,6 @@ type Bruter interface {
 }
 
 //SSH Bruteforce
-//
-//
 type SSHBruter struct{}
 
 // Default SSH Bruter
@@ -30,27 +31,26 @@ func DefaultSSHBruter() SSHBruter {
 func (r SSHBruter) Brute(req *Request) (*Response, error) {
 
 	sshConfig := &ssh.ClientConfig{
-		User: req.User,
-		Auth: []ssh.AuthMethod{ssh.Password(req.Pass)},
+		User: req.Options["User"],
+		Auth: []ssh.AuthMethod{ssh.Password(req.Options["Pass"])},
 	}
 
-	Addr := req.Addr + ":" + strconv.Itoa(req.Port)
-	_, err := ssh.Dial(req.Protocol, Addr, sshConfig)
-	log.Printf("Sending req: %s, User: %s, Pass: %s", req.Addr, req.User, req.Pass)
+	_, err := ssh.Dial(req.Network, req.Address, sshConfig)
+
+	log.Printf("Sending req: %v", req)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("[------]Successful req: %s, User: %s, Pass: %s", req.Addr, req.User, req.Pass)
+	log.Printf("[------]Successful req: %v", req)
+
 	// create a successful Response.
 	var resp = &Response{
-		Req: req, User: req.User, Pass: req.Pass,
+		Request: req, Time: time.Now(),
 	}
 	return resp, nil
 }
 
 // Redis Bruteforce
-//
-//
 type RedisBruter struct{}
 
 func DefaultRedisBruter() RedisBruter {
@@ -58,17 +58,17 @@ func DefaultRedisBruter() RedisBruter {
 }
 
 func (r RedisBruter) Brute(req *Request) (*Response, error) {
-	option := redis.DialPassword(req.Pass)
-	addr := req.Addr + ":" + strconv.Itoa(req.Port)
-	_, err := redis.Dial(req.Protocol, addr, option)
-	// log.Printf("Sending req: %s, Pass: %s", req.Addr, req.Pass)
+	option := redis.DialPassword(req.Options["Pass"])
+	_, err := redis.Dial(req.Network, req.Address, option)
+
+	log.Printf("Sending req: %v", req)
 	if err != nil {
 		// log.Printf("err %s", err)
 		return nil, err
 	}
-	log.Printf("[-------]Successful req: %s, Pass: %s", req.Addr, req.Pass)
+	log.Printf("[-------]Successful req: %v", req)
 	var resp = &Response{
-		Req: req, User: "", Pass: req.Pass,
+		Request: req, Time: time.Now(),
 	}
 	return resp, nil
 }

@@ -19,14 +19,15 @@ type Client struct {
 	// BruteConfig describes How the client act during the bruteforce. (eg: Num of Workers)
 	Config *BruteConfig
 
-	// Cliect progress.
-	Progress float32
+	NumJob int
 
-	//
+	CompletedJob int
+
 	Finished bool
 
-	//
-	Result []*Response
+	Responses []*Response
+
+	Shutdown bool
 }
 
 // NewClient returns a client with custom configation.
@@ -59,7 +60,7 @@ func (c *Client) DoAsync(req *Request) <-chan *Response {
 
 // Client.DoBatch
 func (c *Client) DoBatch(reqs ...*Request) <-chan *Response {
-	workers := c.Config.Workers
+	workers := c.Config.NumWorker
 	if workers == 0 {
 		workers = len(reqs)
 	}
@@ -88,6 +89,11 @@ func (c *Client) DoBatch(reqs ...*Request) <-chan *Response {
 			}
 			workerDone <- true
 		}(i)
+
+		if c.Shutdown {
+			// Stop start new goroutine after get the shutdown signal.
+			break
+		}
 	}
 
 	return responses
@@ -95,7 +101,7 @@ func (c *Client) DoBatch(reqs ...*Request) <-chan *Response {
 
 //
 
-func (c *Client) Run() <-chan *Response {
+func (c *Client) _start() <-chan *Response {
 	credentials, err := ReadUserPass(c.Config.Dictpath)
 	if err != nil {
 		fmt.Printf("Error reading dictfile.")
@@ -103,24 +109,21 @@ func (c *Client) Run() <-chan *Response {
 	}
 
 	requests := make([]*Request, 0)
-	if len(c.Config.Targets) <= 0 {
+	if len(c.Config.Addrs) <= 0 {
 		fmt.Printf("No targets specificed. Exiting")
 		os.Exit(1)
 	}
 
-	for _, t := range c.Config.Targets {
+	for _, addr := range c.Config.Addrs {
 		for _, credential := range credentials {
-			req := &Request{
-				Addr:     t,
-				Protocol: c.Config.Protocol,
-				Port:     c.Config.Port,
-				User:     credential.User,
-				Pass:     credential.Pass,
+			options := map[string]string{"User": credential.User, "Pass": credential.Pass}
+			req, err := NewRequest(addr, c.Config.Timeout, options)
+			if err == nil {
+				requests = append(requests, req)
 			}
-			requests = append(requests, req)
 		}
 	}
-	c.Config.Jobs = len(requests)
+	c.NumJob = len(requests)
 	return c.DoBatch(requests...)
 }
 
@@ -135,16 +138,15 @@ func (c *Client) Start() {
 
 	responses := make([]*Response, 0)
 
-	respch := c.Run()
+	respch := c._start()
 
-	completed := 0
+	c.CompletedJob = 0
 
 	go func() {
-		for completed < c.Config.Jobs {
+		for c.CompletedJob < c.NumJob {
 			select {
 			case resp := <-respch:
-				completed++
-				c.Progress = float32(completed) / float32(c.Config.Jobs)
+				c.CompletedJob++
 				if resp != nil {
 					responses = append(responses, resp)
 				}
@@ -154,7 +156,7 @@ func (c *Client) Start() {
 		}
 		t.Stop()
 		c.Finished = true
-		c.Result = responses
+		c.Responses = responses
 	}()
 }
 
@@ -162,7 +164,7 @@ func (c *Client) Start() {
  Wrapper for client.Progress
 */
 func (c *Client) GetProgress() float32 {
-	return c.Progress
+	return float32(c.CompletedJob) / float32(c.NumJob)
 }
 
 /*
@@ -176,5 +178,5 @@ func (c *Client) IsFinished() bool {
 Wrapper for client.Result
 */
 func (c *Client) GetResult() []*Response {
-	return c.Result
+	return c.Responses
 }

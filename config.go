@@ -1,40 +1,41 @@
 package gobrute
 
-type BruteConfig struct {
-	//
-	Protocol string
+import (
+	"time"
+)
 
+type Rule int
+
+const (
+	// Stop immediately after has the first bruteforce result.
+	STOP_AFTER_ONE_SUCCESS Rule = iota
+
+	// Stop after each target addr has a bruteforce result.
+	STOP_AFTER_ALL_SUCCESS
+
+	// Stop after all passwords has been tried.
+	STOP_AFTER_ALL_PASSWORD_TRIED
+)
+
+type BruteConfig struct {
+
+	// Addrs contains a bruteforce target list.
 	//
-	Port int
+	// It must be formed as full patterns: (redis://127.0.0.1:6379/1, myql://localhost:3306/db_name)
+	Addrs []string
 
 	// Num workers when bruteforce.
-	Workers int
+	NumWorker int
 
-	//
-	RequireUser bool
-
-	//
-	RequirePass bool
-
-	//
+	// The dictionary path. The dictformat is: (username password each line.)
 	Dictpath string
 
-	//
-	Targets []string
+	// Timeout config for each bruteforce request. Default is nil.
+	Timeout time.Duration
 
-	//
-	Jobs int
-}
+	// Interval between each bruteforce request. Default is nil.
+	Interval time.Duration
 
-// NewBruteConfig method.
-//
-//
-func NewBruteConfig(protocol string, port int, workers int, requireUser bool, requirePass bool, dictpath string) *BruteConfig {
-	return &BruteConfig{
-		Protocol: protocol, Port: port, Workers: workers, RequireUser: requireUser, RequirePass: requirePass, Dictpath: dictpath,
-	}
-}
-
-func DefaultSSHConfig() *BruteConfig {
-	return NewBruteConfig("tcp", 22, 100, true, true, "dict/userpass.txt")
+	//Stop After First Result.
+	Mode Rule
 }

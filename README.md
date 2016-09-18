@@ -1,29 +1,36 @@
-# Bruteforce framework with Go.
+# Gobrute.
 
-Gobrute 是一个用golang实现的密码爆破框架，用于实现对各种网络程序（ssh, redis, mysql, mongodb ...）的密码破解。
+Gobrute is a bruteforce framework in golang，can bruteforce almost everything（ssh, redis, mysql, mongodb ...）with simple config。
 
-## Hello World Example
+---------------------------------------
+  * [Features](#features)
+  * [Requirements](#requirements)
+  * [Installation](#installation)
+  * [Usage](#usage)
+  * [Testing / Development](#testing--development)
+  * [License](#license)
 
-```
+
+---------------------------------------
+
+## Features
+  * Easy to config, Easy to use, Easy to extend.
+  * Support ssh, redis, mysql ... on ground.
+  * Easy to implement your own bruteforce plugin. [github-bruteforce](#github-bruteforce)
+
+## Usage
+
+```go
 import (
     "github.com/gushitong/gobrute"
 )
 
 	config := &BruteConfig{
-                Protocol:    "tcp",
-                Port:        6379,
-                Workers:     100,
-                RequireUser: false,
-                RequirePass: true,
                 Dictpath:    "dict/userpass.txt",
-                Targets:     []string{"127.0.0.1"},
+                Addrs:     []string{"redis://127.0.0.1:6379"},
         }
 
         c, err := NewClient(DefaultRedisBruter(), config)
-
-        if err != nil {
-                // Process err.
-        }
 
         c.Start()
 

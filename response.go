@@ -1,7 +1,10 @@
 package gobrute
 
+import (
+	"time"
+)
+
 type Response struct {
-	Req  *Request
-	User string
-	Pass string
+	Request *Request
+	Time    time.Time
 }
